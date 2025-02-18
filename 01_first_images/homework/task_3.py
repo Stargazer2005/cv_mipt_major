@@ -40,17 +40,29 @@ def Rotate(image: np.ndarray, point: tuple, angle: float) -> np.ndarray:
     return image
 
 
-def apply_warpAffine(image, points1, points2) -> np.ndarray:
+def FindCorners(image_mask: np.ndarray) -> list[tuple[int, int]]:
     """
-    Применить афинное преобразование согласно переходу точек points1 -> points2 и
-    преобразовать размер изображения.
+    Нахождение углов тедради по маске.
 
-    :param image:
-    :param points1:
-    :param points2:
-    :return: преобразованное изображение
+    :param image_mask: маска изображения
+    :return: углы тедради
     """
-    # Ваш код
-    pass
+    corners: list[tuple[int, int]] = []
 
-    return image
+    def _FindCorner(is_transposed: bool, is_reversed: bool) -> None:
+        mask = np.transpose(image_mask) if is_transposed else image_mask
+        height, width = mask.shape
+        for i in range(height):
+            k = (height - i - 1) if is_reversed else i
+            if max(mask[k]) == 255:
+                for j in range(width):
+                    if mask[k][j] == 255:
+                        corners.append((k, j) if is_transposed else (j, k))
+                        break
+                break
+
+    for is_reversed in [False, True]:
+        for is_transposed in [False, True]:
+            _FindCorner(is_transposed, is_reversed)
+
+    return corners
