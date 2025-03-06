@@ -93,16 +93,40 @@ def conv_faster(image, kernel):
         out: numpy array of shape (Hi, Wi).
     """
     Hi, Wi = image.shape
-    out = np.zeros((Hi, Wi))
 
-    f_image = np.fft.ifft2(image)
-    f_kernel = np.fft.ifft2(kernel, image.shape[:2])
+    image_padded = np.zeros([max(Hi, Wi), max(Hi, Wi)], dtype=image.dtype)
+    image_padded[:Hi, :Wi] = image
+    kernel_padded = quarter_roll(kernel, max(Hi, Wi), max(Hi, Wi))
+
+    f_image = np.fft.fft2(image_padded)
+    f_kernel = np.fft.fft2(kernel_padded)
 
     f_out = f_image * f_kernel
 
-    out = np.real(np.fft.fft2(f_out))
+    out = np.real(np.fft.ifft2(f_out))[:Hi, :Wi]
 
     return out
+
+
+def quarter_roll(img, new_h, num_w):
+    """Pads the image and rolls the images quarters so that they get into corners
+
+    Args:
+        img: numpy array of shape (Hi, Wi).
+        new_h: height of result
+        new_w: width if result
+
+    Returns:
+        img_rolled: numpy array of shape (new_h, new_w).
+    """
+    Hi, Wi = img.shape
+    roll_height = Hi // 2
+    roll_width = Wi // 2
+
+    img_rolled = np.zeros((new_h, num_w), dtype=img.dtype)
+    img_rolled[:Hi, :Wi] = img
+    img_rolled = np.roll(img_rolled, shift=(-roll_height, -roll_width), axis=(0, 1))
+    return img_rolled
 
 
 def cross_correlation(f, g):
@@ -118,7 +142,7 @@ def cross_correlation(f, g):
         out: numpy array of shape (Hf, Wf).
     """
 
-    out = conv_fast(f, np.flip(g))
+    out = conv_faster(f, np.flip(g))
 
     return out
 
@@ -139,7 +163,7 @@ def zero_mean_cross_correlation(f, g):
     """
     g = g - np.mean(g)
 
-    out = conv_fast(f, np.flip(g))
+    out = conv_faster(f, np.flip(g))
 
     return out
 
